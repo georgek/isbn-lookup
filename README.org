@@ -1,0 +1,4 @@
+#+title: isbn-lookup
+
+A tool for me to look up books using a barcode scanner and input the data into an
+org-mode table. Probably not useful for anyone but me.
