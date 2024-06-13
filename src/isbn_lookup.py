@@ -30,7 +30,7 @@ def format_details(isbn: str, details: dict | None) -> str:
         title = details.get("title", "")
         publishers = format_publishers(details.get("publishers"))
 
-    return f"{title} | {authors} | {publishers} | {isbn}"
+    return f"| {title} | {authors} | {publishers} | {isbn}"
 
 
 def format_authors(authors: dict | None) -> str:
