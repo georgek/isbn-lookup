@@ -1,9 +1,51 @@
+from __future__ import annotations
+
 import os
 
 import httpx
+import pydantic
 
 
-def lookup_isbn(isbn: str) -> dict:
+class Books(pydantic.BaseModel):
+
+    books: dict[str, Book]
+
+
+class Book(pydantic.BaseModel):
+
+    bib_key: str
+    details: BookDetails
+
+
+class BookDetails(pydantic.BaseModel):
+
+    title: str | None = pydantic.Field(default="")
+    authors: list[Author] | None = pydantic.Field(default=None)
+    publishers: list[str] | None = pydantic.Field(default=None)
+
+
+class Author(pydantic.BaseModel):
+
+    name: str
+
+
+def main():
+    print("Press ^D to exit when done")
+    _ = os.system("stty -echo")
+    print(format_header())
+    try:
+        while True:
+            isbn = input()
+            book = lookup_isbn(isbn)
+            formatted = format_book(isbn, book)
+            print(formatted)
+    except (EOFError, KeyboardInterrupt):
+        pass
+    finally:
+        _ = os.system("stty echo")
+
+
+def lookup_isbn(isbn: str) -> Book | None:
     resp = httpx.get(
         "http://openlibrary.org/api/books",
         params={
@@ -14,47 +56,41 @@ def lookup_isbn(isbn: str) -> dict:
     )
 
     if resp.status_code == 200:
-        data: dict = resp.json()
-        return next(iter(data.values()))
+        books = Books(books=resp.json())
+        print(books)
+        try:
+            return next(iter(books.books.values()))
+        except StopIteration:
+            return None
     else:
-        return {}
+        return None
 
 
-def format_details(isbn: str, details: dict | None) -> str:
-    if details is None:
+def format_header() -> str:
+    return f"| title | authors | publishers | isbn\n|---"
+
+
+
+def format_book(isbn: str, book: Book | None) -> str:
+    if book is None:
         authors = ""
         title = ""
         publishers = ""
     else:
-        authors = format_authors(details.get("authors"))
-        title = details.get("title", "")
-        publishers = format_publishers(details.get("publishers"))
+        authors = format_authors(book.details.authors)
+        title = book.details.title
+        publishers = format_publishers(book.details.publishers)
 
     return f"| {title} | {authors} | {publishers} | {isbn}"
 
 
-def format_authors(authors: dict | None) -> str:
+def format_authors(authors: list[Author] | None) -> str:
     if authors is None:
         return ""
-    return ", ".join(author["name"] for author in authors)
+    return ", ".join(author.name for author in authors)
 
 
-def format_publishers(publishers: dict | None) -> str:
+def format_publishers(publishers: list[str] | None) -> str:
     if publishers is None:
         return ""
     return ", ".join(publishers)
-
-
-def main():
-    print("Press ^D to exit when done")
-    os.system("stty -echo")
-    try:
-        while True:
-            isbn = input()
-            data = lookup_isbn(isbn)
-            formatted = format_details(isbn, data.get("details"))
-            print(formatted)
-    except BaseException:
-        pass
-    finally:
-        os.system("stty echo")
