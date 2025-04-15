@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import os
 
 import httpx
@@ -57,7 +58,6 @@ def lookup_isbn(isbn: str) -> Book | None:
 
     if resp.status_code == 200:
         books = Books(books=resp.json())
-        print(books)
         try:
             return next(iter(books.books.values()))
         except StopIteration:
@@ -67,7 +67,7 @@ def lookup_isbn(isbn: str) -> Book | None:
 
 
 def format_header() -> str:
-    return f"| title | authors | publishers | isbn\n|---"
+    return f"| title | authors | publishers | added | isbn\n|---"
 
 
 
@@ -81,7 +81,9 @@ def format_book(isbn: str, book: Book | None) -> str:
         title = book.details.title
         publishers = format_publishers(book.details.publishers)
 
-    return f"| {title} | {authors} | {publishers} | {isbn}"
+    today = datetime.date.today().isoformat()
+
+    return f"| {title} | {authors} | {publishers} | {today} | {isbn}"
 
 
 def format_authors(authors: list[Author] | None) -> str:
